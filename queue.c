@@ -50,8 +50,10 @@ void q_free(struct list_head *head)
     element_t *item, *is;
 
     /* cppcheck-suppress uninitvar */
-    list_for_each_entry_safe (item, is, head, list)
+    list_for_each_entry_safe (item, is, head, list) {
+        free(item->value);
         free(item);
+    }
 
     free(head);
 }
