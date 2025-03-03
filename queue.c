@@ -4,6 +4,30 @@
 
 #include "queue.h"
 
+/**
+ * create_element() - Create an element
+ * @s: string to be copied to the element's value
+ *
+ * Return: the pointer to the element, NULL if allocation failed
+ */
+static inline element_t *create_element(char *s)
+{
+    element_t *node = malloc(sizeof(element_t));
+    if (!node)
+        return NULL;
+
+    char *val = malloc((strlen(s) + 1) * sizeof(char));
+    if (!val) {
+        free(node);
+        return NULL;
+    }
+
+    strncpy(val, s, strlen(val));
+    node->value = val;
+
+    return node;
+}
+
 /* Create an empty queue */
 struct list_head *q_new()
 {
@@ -35,12 +59,30 @@ void q_free(struct list_head *head)
 /* Insert an element at head of queue */
 bool q_insert_head(struct list_head *head, char *s)
 {
+    if (!head)
+        return false;
+
+    element_t *node = create_element(s);
+    if (!node)
+        return false;
+
+    list_add(&node->list, head);
+
     return true;
 }
 
 /* Insert an element at tail of queue */
 bool q_insert_tail(struct list_head *head, char *s)
 {
+    if (!head)
+        return false;
+
+    element_t *node = create_element(s);
+    if (!node)
+        return false;
+
+    list_add_tail(&node->list, head);
+
     return true;
 }
 
