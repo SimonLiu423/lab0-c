@@ -16,13 +16,14 @@ static inline element_t *create_element(char *s)
     if (!node)
         return NULL;
 
-    char *val = malloc((strlen(s) + 1) * sizeof(char));
+    size_t len = strlen(s) + 1;
+    char *val = malloc(len * sizeof(char));
     if (!val) {
         free(node);
         return NULL;
     }
 
-    strncpy(val, s, strlen(val));
+    strncpy(val, s, len);
     node->value = val;
 
     return node;
