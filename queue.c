@@ -300,8 +300,10 @@ void q_reverseK(struct list_head *head, int k)
             q_reverse(&tmp_head);
 
             /* Link the temporary list back to the original */
+            prev->next = node;
             node->prev = prev;
             first->next = next;
+            next->prev = first;
 
             cnt = 0;
         }
