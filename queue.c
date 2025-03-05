@@ -230,6 +230,10 @@ bool q_delete_dup(struct list_head *head)
             prev = item;
         }
     }
+    if (is_dup) {
+        list_del(&prev->list);
+        q_release_element(prev);
+    }
     return true;
 }
 
