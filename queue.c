@@ -29,6 +29,45 @@ static inline element_t *create_element(char *s)
     return node;
 }
 
+typedef enum _order { NON_DECREASING = 1, NON_INCREASING = -1 } Order;
+
+/**
+ * monotonic_from_right() - Make the queue monotonically
+ * non-increasing/non-decreasing from right
+ * @head: header of the queue
+ * @order: non-increasing or non-decreasing order
+ *
+ * Returns: the number of elements in queue after performing operation
+ */
+static inline int monotonic_from_right(struct list_head *head, Order order)
+{
+    if (!head || list_empty(head))
+        return 0;
+
+    if (list_is_singular(head))
+        return 1;
+
+    int cnt = 1;
+
+    struct list_head *left = head->prev->prev, *right = head->prev;
+    while (right != head && right != head->next) {
+        element_t *l_item = list_entry(left, element_t, list);
+        const element_t *r_item = list_entry(right, element_t, list);
+        while (left != head &&
+               order * strcmp(r_item->value, l_item->value) > 0) {
+            left = left->prev;
+            list_del(&l_item->list);
+            q_release_element(l_item);
+            l_item = list_entry(left, element_t, list);
+        }
+        right = left;
+        left = right->prev;
+        if (right != head)
+            cnt++;
+    }
+    return cnt;
+}
+
 /* Create an empty queue */
 struct list_head *q_new()
 {
@@ -273,7 +312,9 @@ void q_sort(struct list_head *head, bool descend) {}
 int q_ascend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+
+    /* Ascend from the left means descend from the right */
+    return monotonic_from_right(head, NON_INCREASING);
 }
 
 /* Remove every node which has a node with a strictly greater value anywhere to
@@ -281,7 +322,9 @@ int q_ascend(struct list_head *head)
 int q_descend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+
+    /* Descend from the left means ascend from the right */
+    return monotonic_from_right(head, NON_DECREASING);
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
