@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "queue.h"
+#define STACKSIZE 100000
 
 /**
  * create_element() - Create an element
@@ -66,6 +67,51 @@ static inline int monotonic_from_right(struct list_head *head, Order order)
             cnt++;
     }
     return cnt;
+}
+
+/**
+ * merge_two_lists() - Merge two lists
+ * @left: left list
+ * @right: right list
+ * @descend: descending order
+ *
+ * Returns: the head of the merged list
+ */
+static struct list_head *merge_two_lists(struct list_head *left,
+                                         struct list_head *right,
+                                         bool descend)
+{
+    struct list_head *head = NULL, **ptr = &head, **node;
+    int flag = descend ? -1 : 1;
+
+    for (node = NULL; left && right; *node = (*node)->next) {
+        const element_t *l_item = list_entry(left, element_t, list);
+        const element_t *r_item = list_entry(right, element_t, list);
+
+        node =
+            (flag * strcmp(l_item->value, r_item->value) <= 0) ? &left : &right;
+        *ptr = *node;
+        ptr = &(*ptr)->next;
+    }
+    *ptr = (struct list_head *) (((size_t) left) | ((size_t) right));
+    return head;
+}
+
+/**
+ * rebuild_list() - Rebuild the list to make it circular
+ * @head: head of the list
+ *
+ * Returns: void
+ */
+static inline void rebuild_list(struct list_head *head)
+{
+    struct list_head *node = head;
+    while (node->next) {
+        node->next->prev = node;
+        node = node->next;
+    }
+    node->next = head;
+    head->prev = node;
 }
 
 /* Create an empty queue */
@@ -311,7 +357,32 @@ void q_reverseK(struct list_head *head, int k)
 }
 
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+void q_sort(struct list_head *head, bool descend)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+
+    int count = 0, n = q_size(head);
+    struct list_head *sorted[STACKSIZE];
+
+    struct list_head *item, *safe;
+    list_for_each_safe (item, safe, head) {
+        item->next = NULL;
+        sorted[count++] = item;
+    }
+
+    for (int sz = 1; sz < n; sz <<= 1) {
+        for (int i = 0; i + sz < n; i += (sz << 1)) {
+            struct list_head *left = sorted[i];
+            struct list_head *right = sorted[i + sz];
+            sorted[i] = merge_two_lists(left, right, descend);
+        }
+    }
+
+    head->next = sorted[0];
+    sorted[0]->prev = head;
+    rebuild_list(head);
+}
 
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
