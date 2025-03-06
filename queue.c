@@ -3,7 +3,26 @@
 #include <string.h>
 
 #include "queue.h"
-#define STACKSIZE 100000
+#define STACKSIZE 32
+
+typedef struct {
+    struct list_head *arr[STACKSIZE];
+    int size;
+} stack_t;
+
+static inline void s_push(stack_t *s, struct list_head *ptr)
+{
+    s->arr[s->size++] = ptr;
+}
+
+static inline struct list_head *s_pop(stack_t *s)
+{
+    if (s->size == 0)
+        return NULL;
+
+    s->size--;
+    return s->arr[s->size];
+}
 
 /**
  * create_element() - Create an element
@@ -362,25 +381,34 @@ void q_sort(struct list_head *head, bool descend)
     if (!head || list_empty(head) || list_is_singular(head))
         return;
 
-    int count = 0, n = q_size(head);
-    struct list_head *sorted[STACKSIZE];
+    stack_t stack = {.size = 0};
 
-    struct list_head *item, *safe;
-    list_for_each_safe (item, safe, head) {
-        item->next = NULL;
-        sorted[count++] = item;
-    }
-
-    for (int sz = 1; sz < n; sz <<= 1) {
-        for (int i = 0; i + sz < n; i += (sz << 1)) {
-            struct list_head *left = sorted[i];
-            struct list_head *right = sorted[i + sz];
-            sorted[i] = merge_two_lists(left, right, descend);
+    unsigned int count = 0;
+    struct list_head *node, *safe;
+    list_for_each_safe (node, safe, head) {
+        node->next = NULL;
+        s_push(&stack, node);
+        unsigned int next_count = count + 1;
+        for (int i = 0; i < sizeof(int) * 8; i++) {
+            /* Merge if there are 2 sorted list with 2^i nodes */
+            if (!((count & (1U << i)) && !(next_count & (1U << i))))
+                break;
+            struct list_head *right = s_pop(&stack);
+            struct list_head *left = s_pop(&stack);
+            s_push(&stack, merge_two_lists(left, right, descend));
         }
+        count = next_count;
+    }
+    /* Merge the rest */
+    while (stack.size > 1) {
+        struct list_head *s1 = s_pop(&stack);
+        struct list_head *s2 = s_pop(&stack);
+        s_push(&stack, merge_two_lists(s2, s1, descend));
     }
 
-    head->next = sorted[0];
-    sorted[0]->prev = head;
+    struct list_head *first = s_pop(&stack);
+    head->next = first;
+    first->prev = head;
     rebuild_list(head);
 }
 
