@@ -4,6 +4,7 @@
 
 #include "queue.h"
 #define STACKSIZE 32
+#define MAX_STRING_LENGTH 128
 
 typedef struct {
     struct list_head *arr[STACKSIZE];
@@ -36,14 +37,13 @@ static inline element_t *create_element(char *s)
     if (!node)
         return NULL;
 
-    size_t len = strlen(s) + 1;
-    char *val = malloc(len * sizeof(char));
+    char *val = malloc(MAX_STRING_LENGTH * sizeof(char));
     if (!val) {
         free(node);
         return NULL;
     }
 
-    strncpy(val, s, len);
+    strncpy(val, s, MAX_STRING_LENGTH);
     node->value = val;
 
     return node;
