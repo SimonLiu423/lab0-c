@@ -155,7 +155,7 @@ void q_free(struct list_head *head)
     element_t *item, *is;
 
     /* cppcheck-suppress uninitvar */
-    list_for_each_entry_safe (item, is, head, list) {
+    list_for_each_entry_safe(item, is, head, list) {
         free(item->value);
         free(item);
     }
@@ -241,7 +241,7 @@ int q_size(struct list_head *head)
 
     int count = 0;
     struct list_head *node;
-    list_for_each (node, head)
+    list_for_each(node, head)
         count++;
 
     return count;
@@ -281,7 +281,7 @@ bool q_delete_dup(struct list_head *head)
     element_t *prev = NULL, *item, *is;
 
     /* cppcheck-suppress uninitvar */
-    list_for_each_entry_safe (item, is, head, list) {
+    list_for_each_entry_safe(item, is, head, list) {
         if (prev && strcmp(prev->value, item->value) == 0) {
             is_dup = true;
             list_del(&item->list);
@@ -323,7 +323,7 @@ void q_reverse(struct list_head *head)
 {
     /* cppcheck-suppress uninitvar */
     struct list_head *item, *is, *tmp;
-    list_for_each_safe (item, is, head) {
+    list_for_each_safe(item, is, head) {
         tmp = item->next;
         item->next = item->prev;
         item->prev = tmp;
@@ -349,7 +349,7 @@ void q_reverseK(struct list_head *head, int k)
     struct list_head *prev = NULL, *first = NULL, *node, *next;
     int cnt = 0;
     /* cppcheck-suppress uninitvar */
-    list_for_each_safe (node, next, head) {
+    list_for_each_safe(node, next, head) {
         cnt++;
         if (cnt == 1) {
             first = node;
@@ -385,7 +385,7 @@ void q_sort(struct list_head *head, bool descend)
 
     unsigned int count = 0;
     struct list_head *node, *safe;
-    list_for_each_safe (node, safe, head) {
+    list_for_each_safe(node, safe, head) {
         node->next = NULL;
         s_push(&stack, node);
         unsigned int next_count = count + 1;
@@ -442,7 +442,7 @@ int q_merge(struct list_head *head, bool descend)
 
     queue_contex_t *qctx;
     struct list_head *first_q = NULL;
-    list_for_each_entry (qctx, head, chain) {
+    list_for_each_entry(qctx, head, chain) {
         if (first_q)
             list_splice_tail_init(qctx->q, first_q);
         else
