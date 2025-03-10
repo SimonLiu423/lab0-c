@@ -60,14 +60,13 @@ static void differentiate(int64_t *exec_times,
                           const int64_t *before_ticks,
                           const int64_t *after_ticks)
 {
-    for (size_t i = 0; i < N_MEASURES; i++)
+    for (size_t i = 0; i < VALID_MEASURES; i++)
         exec_times[i] = after_ticks[i] - before_ticks[i];
 }
 
 static void update_statistics(const int64_t *exec_times, uint8_t *classes)
 {
-    /* discard first 10 measurements */
-    for (size_t i = 10; i < N_MEASURES; i++) {
+    for (size_t i = 0; i < VALID_MEASURES; i++) {
         int64_t difference = exec_times[i];
         /* CPU cycle counter overflowed or dropped measurement */
         if (difference <= 0)
