@@ -42,6 +42,7 @@
 
 #define ENOUGH_MEASURE 10000
 #define TEST_TRIES 10
+#define PERCENTILE_CUTOFF 0.9
 
 static t_context_t *t;
 
@@ -64,7 +65,32 @@ static void differentiate(int64_t *exec_times,
         exec_times[i] = after_ticks[i] - before_ticks[i];
 }
 
-static void update_statistics(const int64_t *exec_times, uint8_t *classes)
+static bool cmp(const void *a, const void *b)
+{
+    return *(int64_t *) a - *(int64_t *) b;
+}
+
+static int64_t percentile(int64_t *a_sorted, double which, size_t size)
+{
+    size_t array_position = (size_t) ((double) size * (double) which);
+    if (array_position == size)
+        return a_sorted[size - 1] + 1;
+    assert(array_position < size);
+    return a_sorted[array_position];
+}
+
+static void prepare_cutoff_value(int64_t *exec_times, double *cutoff_value)
+{
+    qsort(exec_times, VALID_MEASURES, sizeof(int64_t),
+          (int (*)(const void *, const void *)) cmp);
+    *cutoff_value = percentile(exec_times, PERCENTILE_CUTOFF, VALID_MEASURES);
+    return;
+}
+
+
+static void update_statistics(const int64_t *exec_times,
+                              uint8_t *classes,
+                              double cutoff_value)
 {
     for (size_t i = 0; i < N_MEASURES; i++) {
         int64_t difference = exec_times[i];
@@ -72,8 +98,10 @@ static void update_statistics(const int64_t *exec_times, uint8_t *classes)
         if (difference <= 0)
             continue;
 
-        /* do a t-test on the execution time */
-        t_push(t, difference, classes[i]);
+        // printf("\n\ndifference: %ld\n\n", difference);
+        if (difference < cutoff_value)
+            /* do a t-test on the execution time */
+            t_push(t, difference, classes[i]);
     }
 }
 
@@ -116,7 +144,7 @@ static bool report(void)
     return true;
 }
 
-static bool doit(int mode)
+static bool doit(int mode, double *cutoff_value)
 {
     int64_t *before_ticks = calloc(N_MEASURES + 1, sizeof(int64_t));
     int64_t *after_ticks = calloc(N_MEASURES + 1, sizeof(int64_t));
@@ -133,9 +161,12 @@ static bool doit(int mode)
 
     bool ret = measure(before_ticks, after_ticks, input_data, mode);
     differentiate(exec_times, before_ticks, after_ticks);
-    update_statistics(exec_times, classes);
-    ret &= report();
-
+    if (*cutoff_value == -1) {
+        prepare_cutoff_value(exec_times, cutoff_value);
+    } else {
+        update_statistics(exec_times, classes, *cutoff_value);
+        ret &= report();
+    }
     free(before_ticks);
     free(after_ticks);
     free(exec_times);
@@ -156,12 +187,16 @@ static bool test_const(char *text, int mode)
     bool result = false;
     t = malloc(sizeof(t_context_t));
 
+    double cutoff_value = -1;
+
     for (int cnt = 0; cnt < TEST_TRIES; ++cnt) {
         printf("Testing %s...(%d/%d)\n\n", text, cnt, TEST_TRIES);
         init_once();
-        for (int i = 0; i < ENOUGH_MEASURE / (N_MEASURES - DROP_SIZE * 2) + 1;
-             ++i)
-            result = doit(mode);
+        double number_traces_max_t = t->n[0] + t->n[1];
+        while (number_traces_max_t < ENOUGH_MEASURE) {
+            result = doit(mode, &cutoff_value);
+            number_traces_max_t = t->n[0] + t->n[1];
+        }
         printf("\033[A\033[2K\033[A\033[2K");
         if (result)
             break;
