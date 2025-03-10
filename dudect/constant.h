@@ -12,6 +12,8 @@
 
 #define DROP_SIZE 20
 
+#define VALID_MEASURES (N_MEASURES - DROP_SIZE * 2)
+
 #define DUT_FUNCS  \
     _(insert_head) \
     _(insert_tail) \
