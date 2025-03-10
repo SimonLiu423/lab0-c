@@ -45,6 +45,7 @@
 #define PERCENTILE_CUTOFF 0.9
 
 static t_context_t *t;
+bool first_time = true;
 
 /* threshold values for Welch's t-test */
 enum {
@@ -144,13 +145,14 @@ static bool report(void)
     return true;
 }
 
-static bool doit(int mode, double *cutoff_value)
+static bool doit(int mode)
 {
     int64_t *before_ticks = calloc(N_MEASURES + 1, sizeof(int64_t));
     int64_t *after_ticks = calloc(N_MEASURES + 1, sizeof(int64_t));
     int64_t *exec_times = calloc(N_MEASURES, sizeof(int64_t));
     uint8_t *classes = calloc(N_MEASURES, sizeof(uint8_t));
     uint8_t *input_data = calloc(N_MEASURES * CHUNK_SIZE, sizeof(uint8_t));
+    double cutoff_value;
 
     if (!before_ticks || !after_ticks || !exec_times || !classes ||
         !input_data) {
@@ -161,10 +163,12 @@ static bool doit(int mode, double *cutoff_value)
 
     bool ret = measure(before_ticks, after_ticks, input_data, mode);
     differentiate(exec_times, before_ticks, after_ticks);
-    if (*cutoff_value == -1) {
-        prepare_cutoff_value(exec_times, cutoff_value);
+    if (first_time) {
+        /* Discard first measurement to warm things up */
+        first_time = false;
     } else {
-        update_statistics(exec_times, classes, *cutoff_value);
+        prepare_cutoff_value(exec_times, &cutoff_value);
+        update_statistics(exec_times, classes, cutoff_value);
         ret &= report();
     }
     free(before_ticks);
@@ -180,6 +184,7 @@ static void init_once(void)
 {
     init_dut();
     t_init(t);
+    first_time = true;
 }
 
 static bool test_const(char *text, int mode)
@@ -187,14 +192,13 @@ static bool test_const(char *text, int mode)
     bool result = false;
     t = malloc(sizeof(t_context_t));
 
-    double cutoff_value = -1;
 
     for (int cnt = 0; cnt < TEST_TRIES; ++cnt) {
         printf("Testing %s...(%d/%d)\n\n", text, cnt, TEST_TRIES);
         init_once();
         double number_traces_max_t = t->n[0] + t->n[1];
         while (number_traces_max_t < ENOUGH_MEASURE) {
-            result = doit(mode, &cutoff_value);
+            result = doit(mode);
             number_traces_max_t = t->n[0] + t->n[1];
         }
         printf("\033[A\033[2K\033[A\033[2K");
