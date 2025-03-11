@@ -1056,6 +1056,68 @@ static bool do_next(int argc, char *argv[])
     return q_show(0);
 }
 
+/**
+ * list_index_of() - Returns the i-th node in list
+ * @head: head of the list
+ * @index: index
+ *
+ * Returns: @index-th node in list
+ */
+static inline struct list_head *list_index_of(struct list_head *head, int index)
+{
+    if (!head || list_empty(head))
+        return NULL;
+
+    struct list_head *ret = head->next;
+    while (index--)
+        ret = ret->next;
+
+    return ret;
+}
+
+static bool do_shuffle(int argc, char *argv[])
+{
+    if (argc != 1) {
+        report(1, "%s takes no arguments", argv[0]);
+        return false;
+    }
+
+    int cnt = 0;
+    if (!current || !current->q)
+        report(3, "Warning: Calling shuffle on null queue");
+    else
+        cnt = q_size(current->q);
+    error_check();
+
+    if (cnt < 2)
+        report(3, "Warning: Calling shuffle on single node");
+    error_check();
+
+    if (current && exception_setup(true)) {
+        struct list_head *head = current->q;
+        srand(time(NULL));
+
+        int nodes = q_size(head);
+        LIST_HEAD(dummy_head);
+
+        while (nodes) {
+            int random = rand() % nodes;
+            struct list_head *target = list_index_of(head, random);
+
+            list_del(target);
+            list_add_tail(target, &dummy_head);
+
+            nodes--;
+        }
+        list_splice(&dummy_head, head);
+    }
+    exception_cancel();
+
+    q_show(3);
+
+    return !error_check();
+}
+
 static void console_init()
 {
     ADD_COMMAND(new, "Create new queue", "");
@@ -1096,6 +1158,7 @@ static void console_init()
                 "");
     ADD_COMMAND(reverseK, "Reverse the nodes of the queue 'K' at a time",
                 "[K]");
+    ADD_COMMAND(shuffle, "Shuffle the queue", "");
     add_param("length", &string_length, "Maximum length of displayed string",
               NULL);
     add_param("malloc", &fail_probability, "Malloc failure probability percent",
