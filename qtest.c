@@ -1095,7 +1095,6 @@ static bool do_shuffle(int argc, char *argv[])
 
     if (current && exception_setup(true)) {
         struct list_head *head = current->q;
-        srand(time(NULL));
 
         int nodes = q_size(head);
         LIST_HEAD(dummy_head);
